@@ -8,7 +8,8 @@ import requests
 from flask import Flask, jsonify, request, send_from_directory
 from werkzeug.exceptions import RequestEntityTooLarge
 
-from utils import UA, extract_url, detect_platform, platform_name
+from utils import UA, extract_url, detect_platform, platform_name, fetch_safe
+from urllib.parse import urlparse
 from engines import douyin as dy_engine
 from engines import ytdlp as ytdlp_engine
 import downloader as dl
@@ -119,19 +120,37 @@ def api_cookies():
 
 # ---------- 封面 / 图片代理（抖音防盗链） ----------
 
+def _is_local_source(headers) -> bool:
+    """Origin / Referer 若存在，必须来自本机地址，阻止恶意网页跨站触发。"""
+    for key in ("Origin", "Referer"):
+        val = headers.get(key)
+        if not val:
+            continue
+        try:
+            host = (urlparse(val).hostname or "").lower()
+        except ValueError:
+            return False
+        if host not in ("127.0.0.1", "localhost", "::1"):
+            return False
+    return True
+
+
 @app.get("/api/proxy")
 def api_proxy():
+    if not _is_local_source(request.headers):
+        return jsonify(ok=False, error="来源不允许"), 403
     url = request.args.get("url", "")
     if not url.startswith(("http://", "https://")):
         return jsonify(ok=False, error="非法地址"), 400
     try:
-        r = requests.get(url, headers={"User-Agent": UA,
-                                       "Referer": "https://www.douyin.com/"},
-                         timeout=15, stream=True)
+        r = fetch_safe(url, headers={"User-Agent": UA,
+                                     "Referer": "https://www.douyin.com/"})
         r.raise_for_status()
         ctype = r.headers.get("Content-Type", "image/jpeg")
-        return r.raw.read(5 * 1024 * 1024), 200, {"Content-Type": ctype}
-    except requests.RequestException:
+        data = r.raw.read(5 * 1024 * 1024)
+        r.close()
+        return data, 200, {"Content-Type": ctype}
+    except (requests.RequestException, ValueError):
         return jsonify(ok=False, error="图片获取失败"), 502
 
 
