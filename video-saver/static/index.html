@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>视频提取</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231c1c1a'/%3E%3Ccircle cx='16' cy='16' r='6' fill='%23f7f6f2'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<div class="bg-blob bg-blob-a" aria-hidden="true"></div>
+<div class="bg-blob bg-blob-b" aria-hidden="true"></div>
+
+<main class="shell">
+
+  <header class="brand">
+    <span class="brand-dot" aria-hidden="true"></span>
+    <span class="brand-name">视频提取</span>
+  </header>
+
+  <section class="card hero">
+    <h1 class="hero-title">粘贴链接，提取无水印内容</h1>
+    <p class="hero-sub">视频与图文均可，下载后保存在本站 downloads 目录</p>
+
+    <form class="parse-form" id="parseForm" autocomplete="off">
+      <input class="link-input" id="linkInput" type="text"
+             placeholder="粘贴分享链接，或整段分享文案"
+             spellcheck="false">
+      <button class="btn primary" id="submitBtn" type="submit">解析</button>
+    </form>
+
+    <div class="form-foot">
+      <span class="tip" id="formTip"></span>
+      <button class="cookie-btn" id="cookieBtn" type="button">
+        <span class="cookie-dot" id="cookieStatus" aria-hidden="true"></span>
+        需要 Cookie？
+      </button>
+    </div>
+  </section>
+
+  <section class="card result hidden" id="resultCard" aria-live="polite">
+    <div class="result-body">
+      <div class="thumb" id="thumb">
+        <img id="cover" alt="封面">
+      </div>
+      <div class="info">
+        <div class="badges">
+          <span class="badge" id="platformBadge"></span>
+          <span class="badge" id="typeBadge"></span>
+        </div>
+        <h2 class="result-title" id="resultTitle"></h2>
+        <p class="result-meta" id="resultMeta"></p>
+
+        <div class="actions">
+          <button class="btn primary" id="downloadBtn" type="button">下载</button>
+        </div>
+
+        <div class="progress hidden" id="progressWrap">
+          <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+          <p class="progress-text" id="progressText"></p>
+        </div>
+
+        <div class="done hidden" id="doneWrap">
+          <p class="done-text" id="doneText"></p>
+          <a class="btn primary" id="saveLink" download>保存文件</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <span>抖音 · B站 · 快手 · 微博 · 小红书 · 西瓜视频 · YouTube · TikTok</span>
+  </footer>
+
+</main>
+
+<input type="file" id="cookieFile" accept=".txt" hidden>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
