@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>视频提取 · video-saver</title>
+<meta name="description" content="本地运行的视频 / 图文提取下载站：粘贴分享链接，一键下载无水印视频，图文自动打包为 ZIP。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231c1c1a'/%3E%3Ccircle cx='16' cy='16' r='6' fill='%23f7f6f2'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="bg-blob bg-blob-a" aria-hidden="true"></div>
+<div class="bg-blob bg-blob-b" aria-hidden="true"></div>
+
+<main class="shell">
+
+  <header class="brand">
+    <span class="brand-dot" aria-hidden="true"></span>
+    <span class="brand-name">视频提取 · video-saver</span>
+  </header>
+
+  <section class="card hero">
+    <h1 class="hero-title">粘贴链接，提取无水印内容</h1>
+    <p class="hero-sub">
+      一个本地运行的视频 / 图文提取下载站：粘贴分享链接 → 解析 → 预览 → 一键下载无水印视频，图文自动打包为 ZIP。
+    </p>
+    <p class="hero-tags">
+      <span class="tag">Flask</span>
+      <span class="tag">yt-dlp</span>
+      <span class="tag">纯前端无依赖</span>
+    </p>
+  </section>
+
+  <section class="card block">
+    <h2>特性</h2>
+    <ul class="feat-list">
+      <li><b>抖音专用解析器</b>：任意链接规整为作品 ID，提取无水印直链；解析失败自动降级 yt-dlp</li>
+      <li><b>多平台支持</b>：B站、快手、微博、小红书、西瓜视频、YouTube、TikTok 等由 yt-dlp 通用引擎处理</li>
+      <li><b>图文打包</b>：图文作品逐张下载后自动打包 ZIP</li>
+      <li><b>可选 Cookie</b>：遇到反爬限制时，上传 cookies.txt（Netscape 格式）即可，仅存于服务内存</li>
+      <li><b>毛玻璃界面</b>：中文、无第三方 CDN、无 Node 依赖</li>
+    </ul>
+  </section>
+
+  <section class="card block">
+    <h2>快速开始</h2>
+    <p class="hint">克隆仓库后在本机运行（示例环境：Python 3.12）：</p>
+    <pre class="code"><code>pip install -r requirements.txt
+python app.py</code></pre>
+    <p class="hint">浏览器打开 <span class="mono">http://127.0.0.1:5000</span>，粘贴分享链接（整段分享文案也可以）即可解析下载。</p>
+  </section>
+
+  <section class="card block">
+    <h2>支持平台</h2>
+    <p class="hint">抖音 · B站 · 快手 · 微博 · 小红书 · 西瓜视频 · YouTube · TikTok</p>
+  </section>
+
+  <footer class="foot">
+    <a href="https://github.com/Taszara/Nothing" target="_blank" rel="noopener">GitHub 仓库</a>
+    <span>·</span>
+    <span>© <span id="year"></span> Nothing Project</span>
+  </footer>
+
+</main>
+
+<script>
+  document.getElementById("year").textContent = new Date().getFullYear();
+</script>
+</body>
+</html>
