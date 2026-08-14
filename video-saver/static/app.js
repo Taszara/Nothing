@@ -21,8 +21,7 @@
     progressFill: $("#progressFill"),
     progressText: $("#progressText"),
     doneWrap: $("#doneWrap"),
-    doneText: $("#doneText"),
-    saveLink: $("#saveLink"),
+    doneFiles: $("#doneFiles"),
     cookieBtn: $("#cookieBtn"),
     cookieFile: $("#cookieFile"),
     cookieStatus: $("#cookieStatus"),
@@ -94,7 +93,9 @@
     }
 
     el.platformBadge.textContent = d.platform_name || "其他平台";
-    el.typeBadge.textContent = d.type === "images" ? "图文 · " + d.count + " 张" : "视频";
+    el.typeBadge.textContent = d.type === "images" ? "图文 · " + d.count + " 张"
+      : d.type === "mixed" ? "图文 + 视频"
+      : "视频";
     el.title.textContent = d.title || "作品";
     el.meta.textContent = d.author ? "作者：" + d.author : "";
 
@@ -124,7 +125,9 @@
           platform: d.platform,
           type: d.type,
           title: d.title,
-          urls: d.urls,
+          urls: d.urls || [],
+          images: d.images || [],
+          videos: d.videos || [],
           source_url: d.source_url,
           cookie_id: state.cookieId,
         }),
@@ -138,6 +141,25 @@
     }
   });
 
+  function renderDoneFiles(files) {
+    el.doneFiles.textContent = "";
+    files.forEach((f) => {
+      const row = document.createElement("div");
+      row.className = "done-file";
+      const name = document.createElement("span");
+      name.className = "done-file-name";
+      name.textContent = f.name + (f.size ? "（" + fmtSize(f.size) + "）" : "");
+      const link = document.createElement("a");
+      link.className = "btn primary";
+      link.href = "/api/files/" + encodeURIComponent(f.name);
+      link.setAttribute("download", "");
+      link.textContent = "保存";
+      row.appendChild(name);
+      row.appendChild(link);
+      el.doneFiles.appendChild(row);
+    });
+  }
+
   function pollTask(taskId) {
     clearInterval(state.pollTimer);
     state.pollTimer = setInterval(async () => {
@@ -148,9 +170,7 @@
           clearInterval(state.pollTimer);
           el.progressWrap.classList.add("hidden");
           el.doneWrap.classList.remove("hidden");
-          const size = t.filesize ? "（" + fmtSize(t.filesize) + "）" : "";
-          el.doneText.textContent = "已保存：" + t.filename + size;
-          el.saveLink.href = "/api/files/" + encodeURIComponent(t.filename);
+          renderDoneFiles(t.files || [{ name: t.filename, size: t.filesize }]);
         } else if (t.status === "error") {
           clearInterval(state.pollTimer);
           el.progressWrap.classList.add("hidden");

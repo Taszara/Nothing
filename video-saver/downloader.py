@@ -47,21 +47,40 @@ def _run(task_id: str, args: dict):
     typ = args.get("type") or "video"
     title = args.get("title") or "download"
     urls = args.get("urls") or []
+    images = args.get("images") or []
+    videos = args.get("videos") or []
     source_url = args.get("source_url")
     cookies = args.get("cookies") or None
 
     try:
-        if platform == "douyin" and typ == "images":
-            path = _save_images(task_id, title, urls, cookies)
+        if platform == "douyin" and typ == "mixed":
+            files = _save_mixed(task_id, title, images, videos, cookies)
+        elif platform == "douyin" and typ == "images":
+            files = [_save_images(task_id, title, urls or images, cookies)]
         elif platform == "douyin" and typ == "video":
-            path = _save_video(task_id, title, urls[0], cookies)
+            files = [_save_video(task_id, title, (urls or videos)[0], cookies)]
         else:
-            path = _save_ytdlp(task_id, source_url, cookies)
-        size = path.stat().st_size if path.exists() else 0
-        _update(task_id, status="done", progress=100,
-                filename=path.name, filesize=size)
+            files = [_save_ytdlp(task_id, source_url, cookies)]
+
+        file_infos = [{"name": p.name, "size": p.stat().st_size}
+                      for p in files if p.exists()]
+        _update(task_id, status="done", progress=100, files=file_infos,
+                filename=file_infos[0]["name"] if file_infos else "",
+                filesize=file_infos[0]["size"] if file_infos else 0)
     except Exception as e:  # noqa: BLE001 —— 异常信息直接呈现给用户
         _update(task_id, status="error", error=str(e) or "下载失败")
+
+
+def _save_mixed(task_id: str, title: str, images: list[str],
+                videos: list[str], cookies: str | None) -> list[Path]:
+    """图文+视频混排：视频逐个下载、图片打包 ZIP，返回全部文件路径。"""
+    files = []
+    for i, vurl in enumerate(videos, 1):
+        name = title if len(videos) == 1 else f"{title} 视频{i}"
+        files.append(_save_video(task_id, name, vurl, cookies))
+    if images:
+        files.append(_save_images(task_id, title, images, cookies))
+    return files
 
 
 def _headers(cookies: str | None, referer: str | None = None):

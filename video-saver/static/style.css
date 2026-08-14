@@ -272,12 +272,29 @@ body {
 .done-text {
   font-size: 13.5px;
   color: var(--ink-soft);
-  word-break: break-all;
 }
-.done .btn {
-  margin-top: 12px;
-  padding: 10px 22px;
-  font-size: 14px;
+.done-files {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.done-file {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.done-file-name {
+  font-size: 13px;
+  color: var(--ink-soft);
+  word-break: break-all;
+  min-width: 0;
+}
+.done-file .btn {
+  flex-shrink: 0;
+  padding: 8px 18px;
+  font-size: 13px;
   display: inline-block;
   text-decoration: none;
 }

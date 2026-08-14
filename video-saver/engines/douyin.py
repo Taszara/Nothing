@@ -11,6 +11,7 @@ window._ROUTER_DATA）-> 提取 aweme_detail ->
 """
 import json
 import re
+import time
 import urllib.parse
 
 import requests
@@ -110,13 +111,21 @@ def _normalize(url: str, session: requests.Session) -> str:
 
 
 def _fetch_share_page(aweme_id: str, session: requests.Session) -> str:
-    """移动端分享页仍内嵌 _ROUTER_DATA，是当前最稳的纯 HTTP 数据源。"""
-    resp = session.get(
-        f"https://www.iesdouyin.com/share/video/{aweme_id}/",
-        headers=MOBILE_HEADERS, timeout=20,
-    )
+    """移动端分享页仍内嵌 _ROUTER_DATA，是当前最稳的纯 HTTP 数据源。
+
+    抖音近期要求先建立会话拿到 ttwid 后才返回作品数据：
+    首次请求通常只有空壳，带 Cookie 重试一次即可拿到完整 JSON。
+    """
+    url = f"https://www.iesdouyin.com/share/video/{aweme_id}/"
+    resp = session.get(url, headers=MOBILE_HEADERS, timeout=20)
     resp.raise_for_status()
-    return resp.text
+    html = resp.text
+    if "aweme_id" not in html and session.cookies.get("ttwid"):
+        time.sleep(1.2)
+        resp = session.get(url, headers=MOBILE_HEADERS, timeout=20)
+        resp.raise_for_status()
+        html = resp.text
+    return html
 
 
 def _build_session(cookies: str | None = None) -> requests.Session:
@@ -126,9 +135,10 @@ def _build_session(cookies: str | None = None) -> requests.Session:
     return s
 
 
-def _pick_video_url(aweme: dict) -> str | None:
-    """从 aweme.video 中挑选最高质量的直链，并去除水印（playwm->play）。"""
-    video = aweme.get("video") or {}
+def _pick_video_url(container: dict) -> str | None:
+    """从含 video 键的字典（aweme 本身或 images 单项）中挑选最高质量直链，
+    并去除水印（playwm->play）。"""
+    video = container.get("video") or {}
     candidates = []
 
     # 按码率从高到低收集 play_addr
@@ -151,14 +161,45 @@ def _pick_video_url(aweme: dict) -> str | None:
     return url.replace("playwm", "play")
 
 
-def _pick_image_urls(aweme: dict) -> list[str]:
-    """图文：提取每张图的直链。"""
-    urls = []
-    for img in aweme.get("images") or []:
-        lst = (img or {}).get("url_list") or []
-        if lst:
-            urls.append(lst[0])
-    return urls
+_VIDEO_EXT = (".mp4", ".webm", ".mov", ".m4v", ".flv")
+
+
+def _looks_like_video(url: str) -> bool:
+    """判断 url 是否指向视频文件（混排图文里会出现 mp4 直链）。"""
+    low = url.lower()
+    path = low.split("?", 1)[0].split("#", 1)[0]
+    return ("/play" in low or "playwm" in low
+            or path.endswith(_VIDEO_EXT))
+
+
+def _classify_media(aweme: dict) -> tuple[list[str], list[str]]:
+    """从 aweme_detail 中提取图片与视频，支持图文+视频混排
+    （如动态图文：第一张为图片、第二张为视频）。
+
+    返回 (images, videos)，两者可同时非空。
+    """
+    images, videos = [], []
+
+    main_video = _pick_video_url(aweme)
+    if main_video:
+        videos.append(main_video)
+
+    for item in aweme.get("images") or []:
+        item = item or {}
+        item_video = _pick_video_url(item)  # 图片项内携带的视频
+        if item_video:
+            videos.append(item_video)
+            continue
+        lst = item.get("url_list") or []
+        if not lst:
+            continue
+        url = lst[0]
+        if _looks_like_video(url):
+            videos.append(url)
+        else:
+            images.append(url)
+
+    return images, videos
 
 
 # ---------- 对外接口 ----------
@@ -183,22 +224,24 @@ def parse(url: str, cookies: str | None = None) -> dict:
     desc = aweme.get("desc") or "抖音作品"
     author = (aweme.get("author") or {}).get("nickname") or ""
 
-    images = _pick_image_urls(aweme)
+    images, videos = _classify_media(aweme)
+    if not images and not videos:
+        raise DouyinError("未能识别作品内容（可能需要 Cookie）。")
+
+    base = {
+        "title": desc,
+        "author": author,
+        "count": len(images) + len(videos),
+        "engine": "douyin",
+    }
+    if images and videos:
+        # 图文+视频混排（动态图文等）：图片与视频同时提供
+        return {**base, "type": "mixed",
+                "cover": images[0], "images": images, "videos": videos}
     if images:
-        return {
-            "type": "images",
-            "title": desc,
-            "author": author,
-            "cover": images[0],
-            "count": len(images),
-            "urls": images,
-            "engine": "douyin",
-        }
+        return {**base, "type": "images", "cover": images[0], "urls": images}
 
-    video_url = _pick_video_url(aweme)
-    if not video_url:
-        raise DouyinError("未能获取到视频直链（可能需要 Cookie）。")
-
+    # 纯视频
     cover = ""
     cover_obj = (aweme.get("video") or {}).get("cover")
     if isinstance(cover_obj, dict):
@@ -210,12 +253,4 @@ def parse(url: str, cookies: str | None = None) -> dict:
         else:
             cover = first
 
-    return {
-        "type": "video",
-        "title": desc,
-        "author": author,
-        "cover": cover,
-        "count": 1,
-        "urls": [video_url],
-        "engine": "douyin",
-    }
+    return {**base, "type": "video", "cover": cover, "urls": videos}
